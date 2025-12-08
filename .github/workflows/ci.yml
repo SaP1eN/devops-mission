@@ -1,0 +1,32 @@
+name: CI Pipeline
+
+on: [push]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install flask
+        pip install pytest
+
+    - name: Test Application
+      run: |
+        # We are just checking if the file exists and is valid Python
+        python -m compileall app.py
+        echo "Basic syntax check passed!"
+
+    - name: Build Docker Image
+      run: |
+        docker build -t my-app .
+        echo "Docker build successful!"
