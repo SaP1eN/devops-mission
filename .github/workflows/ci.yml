@@ -1,32 +1,41 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on: [push]
 
 jobs:
-  build-test:
+  build-test-push:
     runs-on: ubuntu-latest
-
     steps:
     - name: Check out code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
       with:
-        python-version: '3.9'
+        username: ${{ secrets.DOCKER_USERNAME }} # We will add this secret next!
+        password: ${{ secrets.DOCKER_PASSWORD }} # We will add this secret next!
 
-    - name: Install dependencies
+    - name: Build and Push Docker Image
       run: |
-        pip install flask
-        pip install pytest
+        docker build -t navyabhanushali/mission-app:latest .
+        docker push navyabhanushali/mission-app:latest
 
-    - name: Test Application
-      run: |
-        # We are just checking if the file exists and is valid Python
-        python -m compileall app.py
-        echo "Basic syntax check passed!"
-
-    - name: Build Docker Image
-      run: |
-        docker build -t my-app .
-        echo "Docker build successful!"
+  deploy:
+    needs: build-test-push # Wait for build to finish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to AWS via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST_IP }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Stop the old container
+          sudo docker stop $(sudo docker ps -q) || true
+          # Remove the old container
+          sudo docker rm $(sudo docker ps -aq) || true
+          # Pull the new image
+          sudo docker pull navyabhanushali/mission-app:latest
+          # Run the new container
+          sudo docker run -d -p 5000:5000 navyabhanushali/mission-app:latest
