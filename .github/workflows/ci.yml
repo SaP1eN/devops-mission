@@ -20,22 +20,45 @@ jobs:
         docker build -t navyabhanushali/mission-app:latest .
         docker push navyabhanushali/mission-app:latest
 
+  # deploy:
+  #   needs: build-test-push # Wait for build to finish
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Deploy to AWS via SSH
+  #     uses: appleboy/ssh-action@master
+  #     with:
+  #       host: ${{ secrets.HOST_IP }}
+  #       username: ubuntu
+  #       key: ${{ secrets.EC2_SSH_KEY }}
+  #       script: |
+  #         # Stop the old container
+  #         sudo docker stop $(sudo docker ps -q) || true
+  #         # Remove the old container
+  #         sudo docker rm $(sudo docker ps -aq) || true
+  #         # Pull the new image
+  #         sudo docker pull navyabhanushali/mission-app:latest
+  #         # Run the new container
+  #         sudo docker run -d -p 5000:5000 navyabhanushali/mission-app:latest
+
   deploy:
-    needs: build-test-push # Wait for build to finish
-    runs-on: ubuntu-latest
-    steps:
-    - name: Deploy to AWS via SSH
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST_IP }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          # Stop the old container
-          sudo docker stop $(sudo docker ps -q) || true
-          # Remove the old container
-          sudo docker rm $(sudo docker ps -aq) || true
-          # Pull the new image
-          sudo docker pull navyabhanushali/mission-app:latest
-          # Run the new container
-          sudo docker run -d -p 5000:5000 navyabhanushali/mission-app:latest
+      needs: build-test-push
+      runs-on: ubuntu-latest
+      steps:
+      - name: Deploy to AWS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # 1. Go to the project folder
+            cd devops-mission
+            
+            # 2. Pull the latest code (docker-compose.yml & nginx config)
+            git pull origin main
+            
+            # 3. Pull the latest Docker Image (Python app)
+            sudo docker compose pull
+            
+            # 4. Restart the containers (Zero Downtime-ish)
+            sudo docker compose up -d --build
