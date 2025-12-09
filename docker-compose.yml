@@ -27,5 +27,17 @@ services:
     volumes:
       - redis_data:/data
 
+  # Service 4: The Dashboard (Portainer)
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: monitoring-portainer
+    restart: always
+    ports:
+      - "9443:9443"  # Open the dashboard port
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Give it permission to talk to Docker
+      - portainer_data:/data                       # Save dashboard settings
+
 volumes:
   redis_data:
+  portainer_data:
