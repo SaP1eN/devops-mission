@@ -23,3 +23,6 @@ services:
   redis-db:
     image: "redis:alpine"
     container_name: database-redis
+
+volumes:
+  redis_data:
